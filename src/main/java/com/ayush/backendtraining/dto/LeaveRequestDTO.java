@@ -1,9 +1,7 @@
 package com.ayush.backendtraining.dto;
 
 import com.ayush.backendtraining.model.LeaveType;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
+import jakarta.validation.constraints.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.Setter;
@@ -22,9 +20,11 @@ public class LeaveRequestDTO {
     private LeaveType leaveType;
 
     @NotNull(message = "Start date is required")
+    @FutureOrPresent(message = "Can't apply leave for past date")
     private LocalDate startDate;
 
     @NotNull(message = "End date is required")
+    @FutureOrPresent(message = "Can't apply leave for past date")
     private LocalDate endDate;
 
     @NotBlank(message = "Reason is required")

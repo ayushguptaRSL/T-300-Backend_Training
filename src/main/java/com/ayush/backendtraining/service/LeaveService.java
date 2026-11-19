@@ -3,6 +3,8 @@ package com.ayush.backendtraining.service;
 import com.ayush.backendtraining.dto.LeaveRequestDTO;
 import com.ayush.backendtraining.dto.LeaveResponseDTO;
 import com.ayush.backendtraining.dto.UpdateLeaveRequestDTO;
+import com.ayush.backendtraining.exception.InvalidDateRange;
+import com.ayush.backendtraining.exception.ResourceNotFound;
 import com.ayush.backendtraining.model.LeaveRequest;
 import com.ayush.backendtraining.model.LeaveType;
 import com.ayush.backendtraining.repository.LeaveRepository;
@@ -30,11 +32,15 @@ public class LeaveService {
     }
 
     public LeaveResponseDTO getLeaveRequest(Long id) {
-        LeaveRequest leaveRequest = leaveRepository.findLeaveRequestById(id).orElse(null);
+        LeaveRequest leaveRequest = leaveRepository
+                .findLeaveRequestById(id)
+                .orElseThrow(() -> new ResourceNotFound("Leave Request with id " + id + " not found."));
         return mapLeaveRequestToResponseDTO(leaveRequest);
     }
 
     public LeaveResponseDTO createLeaveRequest(LeaveRequestDTO request) {
+        validateDateRange(request.getStartDate(), request.getEndDate());
+
         LeaveRequest leaveRequest = leaveRepository.saveLeaveRequest(new LeaveRequest(
                 request.getEmployeeId(),
                 request.getLeaveType(),
@@ -47,10 +53,14 @@ public class LeaveService {
     }
 
     public LeaveResponseDTO updateLeaveRequest(Long id, UpdateLeaveRequestDTO updateRequest) {
-        LeaveRequest leaveRequest = leaveRepository.findLeaveRequestById(id).orElse(null);
-        if (leaveRequest == null) {
-            return null;
-        }
+        LeaveRequest leaveRequest = leaveRepository
+                .findLeaveRequestById(id)
+                .orElseThrow(() -> new ResourceNotFound("Leave Request with id " + id + " not found."));
+
+        LocalDate targetStartDate = updateRequest.getStartDate() != null ? updateRequest.getStartDate() : leaveRequest.getStartDate();
+        LocalDate targetEndDate = updateRequest.getEndDate() != null ? updateRequest.getEndDate() : leaveRequest.getEndDate();
+
+        validateDateRange(targetStartDate, targetEndDate);
 
         if (updateRequest.getLeaveType() != null) {
             leaveRequest.setLeaveType(updateRequest.getLeaveType());
@@ -75,11 +85,17 @@ public class LeaveService {
 
     public String deleteLeaveRequest(Long id) {
         if(!leaveRepository.existsLeaveRequestById(id)){
-            return "LeaveRequest does not exist";
+            throw new ResourceNotFound("Leave Request with id " + id + " not found.");
         }
 
         leaveRepository.deleteLeaveRequestById(id);
         return "LeaveRequest id: " + id + " has been deleted";
+    }
+
+    private void validateDateRange(LocalDate startDate, LocalDate endDate) {
+        if (startDate != null && endDate != null && endDate.isBefore(startDate)) {
+            throw new InvalidDateRange("Start date must be before or equal to end date.");
+        }
     }
 
     private LeaveResponseDTO mapLeaveRequestToResponseDTO(LeaveRequest leaveRequest) {
